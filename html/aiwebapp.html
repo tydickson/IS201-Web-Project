@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qwixx Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        #board {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 800px;
+        }
+        .player-board {
+            margin: 20px;
+            padding: 10px;
+            border: 2px solid #333;
+            background-color: #fff;
+        }
+        .row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .box {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #ccc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .box.marked {
+            background-color: #888;
+            color: #fff;
+        }
+        .box.disabled {
+            background-color: #ddd;
+            cursor: not-allowed;
+        }
+        .red-row {
+            background-color: #ffcccc;
+        }
+        .yellow-row {
+            background-color: #ffffcc;
+        }
+        .green-row {
+            background-color: #ccffcc;
+        }
+        .blue-row {
+            background-color: #ccccff;
+        }
+        #dice {
+            display: flex;
+            margin: 20px;
+            gap: 10px;
+        }
+        .dice {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            font-weight: bold;
+            border: 2px solid #333;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .red-dice {
+            background-color: #ffcccc;
+        }
+        .yellow-dice {
+            background-color: #ffffcc;
+        }
+        .green-dice {
+            background-color: #ccffcc;
+        }
+        .blue-dice {
+            background-color: #ccccff;
+        }
+        .white-dice {
+            background-color: #ffffff;
+            border-color: #333;
+        }
+        #penalties {
+            margin: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .penalty {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #333;
+            background-color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .penalty.marked {
+            background-color: #f00;
+            color: #fff;
+        }
+        #score {
+            margin: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        #gameOver {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        #gameOver h2 {
+            color: #f00;
+        }
+        #gameOver button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Qwixx Game</h1>
+    <div id="dice">
+        <div class="dice white-dice" id="whiteDice1">1</div>
+        <div class="dice white-dice" id="whiteDice2">1</div>
+        <div class="dice red-dice" id="redDice">1</div>
+        <div class="dice yellow-dice" id="yellowDice">1</div>
+        <div class="dice green-dice" id="greenDice">1</div>
+        <div class="dice blue-dice" id="blueDice">1</div>
+    </div>
+    <div id="board">
+        <div class="player-board" id="playerBoard">
+            <h2>Your Scorecard</h2>
+            <div class="row red-row" id="redRow"></div>
+            <div class="row yellow-row" id="yellowRow"></div>
+            <div class="row green-row" id="greenRow"></div>
+            <div class="row blue-row" id="blueRow"></div>
+        </div>
+    </div>
+    <div id="penalties">
+        <div class="penalty" id="penalty1" onclick="takePenalty()"></div>
+        <div class="penalty" id="penalty2" onclick="takePenalty()"></div>
+        <div class="penalty" id="penalty3" onclick="takePenalty()"></div>
+        <div class="penalty" id="penalty4" onclick="takePenalty()"></div>
+    </div>
+    <div>^ Penalties ^</div>
+    <div id="score">Score: 0</div>
+    <div id="gameOver">
+        <h2>Game Over</h2>
+        <button onclick="restartGame()">Play Again?</button>
+    </div>
+    <button id="rollDice">Roll Dice</button>
+    <div id="rules">
+        <h2>Rules of Qwixx</h2>
+        <p><strong>Objective:</strong> The goal is to score the highest points by marking numbers in rows. Each row has a different sequence of numbers (Red and Yellow: 2-12, Green and Blue: 12-2).</p>
+        <p><strong>Gameplay:</strong></p>
+        <ul>
+            <li>The active player rolls two white dice and four colored dice.</li>
+            <li>All players can mark the sum of the two white dice in one of their rows, following the left-to-right rule.</li>
+            <li>The active player may also combine one white die with a colored die to mark a number in the matching color row.</li>
+        </ul>
+        <p><strong>Rules:</strong></p>
+        <ul>
+            <li>Numbers must be marked from left to right; skipped numbers cannot be marked later.</li>
+            <li>Mark at least five numbers in a row to lock it and gain bonus points.</li>
+            <li>If no action is taken on your turn, you must take a penalty (-5 points).</li>
+        </ul>
+        <p><strong>Scoring:</strong> Points are calculated based on the number of marked numbers in each row. Penalties deduct 5 points each. The player with the highest total score wins.</p>
+    </div>
+    <script>
+        const rows = ["red", "yellow", "green", "blue"];
+        const diceElements = {
+            white1: document.getElementById("whiteDice1"),
+            white2: document.getElementById("whiteDice2"),
+            red: document.getElementById("redDice"),
+            yellow: document.getElementById("yellowDice"),
+            green: document.getElementById("greenDice"),
+            blue: document.getElementById("blueDice")
+        };
+
+        let score = 0;
+        let penalties = 0;
+
+        function initializeBoard() {
+            rows.forEach(color => {
+                const row = document.getElementById(`${color}Row`);
+                const start = color === "red" || color === "yellow" ? 2 : 12;
+                const end = color === "red" || color === "yellow" ? 12 : 2;
+                const step = start < end ? 1 : -1;
+
+                for (let i = start; step > 0 ? i <= end : i >= end; i += step) {
+                    const box = document.createElement("div");
+                    box.classList.add("box");
+                    box.dataset.value = i;
+                    box.dataset.color = color;
+                    box.textContent = i;
+                    box.addEventListener("click", () => toggleBox(box));
+                    row.appendChild(box);
+                }
+            });
+        }
+
+        function toggleBox(box) {
+            const row = document.getElementById(`${box.dataset.color}Row`);
+            const value = parseInt(box.dataset.value);
+
+            if (!box.classList.contains("marked")) {
+                const previousBoxes = Array.from(row.children).filter(b => parseInt(b.dataset.value) < value);
+                const lastMarked = previousBoxes.reverse().find(b => b.classList.contains("marked"));
+                if (lastMarked && parseInt(lastMarked.dataset.value) > value) {
+                    alert("You cannot mark this box because it's to the left of an already marked number.");
+                    return;
+                }
+                box.classList.add("marked");
+            } else {
+                const nextBoxes = Array.from(row.children).filter(b => parseInt(b.dataset.value) > value && b.classList.contains("marked"));
+                if (nextBoxes.length > 0) {
+                    alert("You cannot unmark this box because there are numbers marked after it.");
+                    return;
+                }
+                box.classList.remove("marked");
+            }
+
+            updateScore();
+        }
+
+        function updateScore() {
+            score = 0;
+            rows.forEach(color => {
+                const row = document.getElementById(`${color}Row`);
+                const markedBoxes = row.querySelectorAll(".box.marked").length;
+                score += (markedBoxes * (markedBoxes + 1)) / 2;
+            });
+            score -= penalties * 5;
+            document.getElementById("score").textContent = `Score: ${score}`;
+
+            if (penalties === 4) {
+                endGame();
+            }
+        }
+
+        function rollDice() {
+            const roll = () => Math.floor(Math.random() * 6) + 1;
+            diceElements.white1.textContent = roll();
+            diceElements.white2.textContent = roll();
+            diceElements.red.textContent = roll();
+            diceElements.yellow.textContent = roll();
+            diceElements.green.textContent = roll();
+            diceElements.blue.textContent = roll();
+        }
+
+        function takePenalty() {
+            if (penalties < 4) {
+                penalties++;
+                document.getElementById(`penalty${penalties}`).classList.add("marked");
+                updateScore();
+            }
+        }
+
+        function endGame() {
+            document.getElementById("gameOver").style.display = "flex";
+        }
+
+        function restartGame() {
+            score = 0;
+            penalties = 0;
+            document.getElementById("score").textContent = "Score: 0";
+            document.getElementById("gameOver").style.display = "none";
+            document.querySelectorAll(".box.marked").forEach(box => box.classList.remove("marked"));
+            document.querySelectorAll(".penalty.marked").forEach(penalty => penalty.classList.remove("marked"));
+            document.querySelectorAll(".row").forEach(row => row.innerHTML = "");
+            initializeBoard();
+        }
+
+        document.getElementById("rollDice").addEventListener("click", rollDice);
+        initializeBoard();
+    </script>
+</body>
+</html>
